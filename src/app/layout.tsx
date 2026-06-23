@@ -14,9 +14,14 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Wendy Coach — Trading Journal & AI Mentor",
+  title: "Wendy Coach — AI Trading Journal & Mentor",
   description:
-    "Log trades, journal your mindset, and get end-of-day coaching from Wendy powered by RAG.",
+    "Journal trades, sync Tradovate, and get RAG-powered coaching from Wendy — your personal trading mentor for prop firm and futures traders.",
+  openGraph: {
+    title: "Wendy Coach — AI Trading Journal & Mentor",
+    description:
+      "Log trades, reflect on mindset, sync Tradovate, and get honest AI coaching every day.",
+  },
 };
 
 export default function RootLayout({

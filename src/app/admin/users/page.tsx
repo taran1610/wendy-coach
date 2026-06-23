@@ -46,7 +46,7 @@ export default async function AdminUsersPage() {
       <div className="card overflow-x-auto">
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm text-[var(--muted)]">{users.length} user(s)</p>
-          <Link href="/" className="text-sm text-[var(--accent)] hover:underline">
+          <Link href="/dashboard" className="text-sm text-[var(--accent)] hover:underline">
             Back to dashboard
           </Link>
         </div>

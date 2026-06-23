@@ -3,14 +3,14 @@
 import { Nav } from "@/components/Nav";
 import { usePathname } from "next/navigation";
 
+const PUBLIC_LAYOUT_ROUTES = ["/", "/login", "/setup"];
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isAuthPage =
-    pathname.startsWith("/login") ||
-    pathname.startsWith("/auth") ||
-    pathname.startsWith("/setup");
+  const isPublicLayout =
+    PUBLIC_LAYOUT_ROUTES.includes(pathname) || pathname.startsWith("/auth");
 
-  if (isAuthPage) {
+  if (isPublicLayout) {
     return <>{children}</>;
   }
 

@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { SignOutButton } from "@/components/SignOutButton";
 
 const links = [
-  { href: "/", label: "Dashboard", icon: "◈" },
+  { href: "/dashboard", label: "Dashboard", icon: "◈" },
   { href: "/trades", label: "Trades", icon: "↗" },
   { href: "/journal", label: "Journal", icon: "✎" },
   { href: "/coach", label: "Wendy Coach", icon: "★" },
@@ -43,10 +43,7 @@ export function Nav() {
 
         <nav className="flex lg:flex-col gap-1 overflow-x-auto pb-2 lg:pb-0">
           {allLinks.map((link) => {
-            const active =
-              link.href === "/"
-                ? pathname === "/"
-                : pathname.startsWith(link.href);
+            const active = pathname.startsWith(link.href);
 
             return (
               <Link

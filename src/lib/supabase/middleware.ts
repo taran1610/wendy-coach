@@ -2,11 +2,14 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getSupabaseEnv, isSupabaseConfigured } from "@/lib/supabase/env";
 
+const PUBLIC_ROUTES = ["/", "/login", "/setup"];
+
 export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const isSetupRoute = pathname.startsWith("/setup");
-  const isAuthRoute =
-    pathname.startsWith("/login") || pathname.startsWith("/auth");
+  const isAuthRoute = pathname.startsWith("/login") || pathname.startsWith("/auth");
+  const isPublicRoute =
+    PUBLIC_ROUTES.includes(pathname) || isAuthRoute || isSetupRoute;
 
   if (!isSupabaseConfigured()) {
     if (isSetupRoute) {
@@ -39,15 +42,15 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user && !isAuthRoute && !isSetupRoute) {
+  if (user && (pathname === "/" || pathname === "/login")) {
     const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = "/login";
+    redirectUrl.pathname = "/dashboard";
     return NextResponse.redirect(redirectUrl);
   }
 
-  if (user && pathname === "/login") {
+  if (!user && !isPublicRoute) {
     const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = "/";
+    redirectUrl.pathname = "/login";
     return NextResponse.redirect(redirectUrl);
   }
 
