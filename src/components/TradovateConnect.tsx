@@ -26,17 +26,35 @@ export function TradovateConnect() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  async function loadStatus(showLoading = true) {
-    if (showLoading) setLoading(true);
+  async function syncTrades() {
+    setSyncing(true);
+    setError("");
+
+    const res = await fetch("/api/tradovate/sync", { method: "POST" });
+    setSyncing(false);
+    const data = await res.json();
+
+    if (!res.ok) {
+      setError(data.error ?? "Sync failed");
+      return false;
+    }
+
+    setMessage(`Synced ${data.imported} new trade(s) from ${data.totalPairs} fill pair(s).`);
+    router.refresh();
+    return true;
+  }
+
+  async function refreshStatus() {
     const res = await fetch("/api/tradovate/status");
     const data = await res.json();
-    if (data.error) setError(data.error);
-    else {
-      setStatus(data);
-      if (data.username) setUsername(data.username);
-      if (data.environment) setEnvironment(data.environment);
+    if (data.error) {
+      setError(data.error);
+      return;
     }
-    setLoading(false);
+
+    setStatus(data);
+    if (data.username) setUsername(data.username);
+    if (data.environment) setEnvironment(data.environment);
   }
 
   useEffect(() => {
@@ -83,26 +101,16 @@ export function TradovateConnect() {
 
     setPassword("");
     setStatus((s) => ({ ...s, appConfigured: true, ...data }));
-    setMessage("Tradovate connected ✓");
+    setMessage("Connected. Importing your trades...");
+
+    await syncTrades();
+    await refreshStatus();
   }
 
   async function onSync() {
-    setSyncing(true);
-    setError("");
     setMessage("");
-
-    const res = await fetch("/api/tradovate/sync", { method: "POST" });
-    setSyncing(false);
-    const data = await res.json();
-
-    if (!res.ok) {
-      setError(data.error ?? "Sync failed");
-      return;
-    }
-
-    setMessage(`Synced ${data.imported} new trade(s) from ${data.totalPairs} fill pair(s).`);
-    await loadStatus();
-    router.refresh();
+    await syncTrades();
+    await refreshStatus();
   }
 
   async function onDisconnect() {
@@ -111,11 +119,30 @@ export function TradovateConnect() {
     await fetch("/api/tradovate/disconnect", { method: "DELETE" });
     setMessage("");
     setError("");
-    await loadStatus();
+    setPassword("");
+    await refreshStatus();
   }
 
   if (loading) {
     return <div className="card text-sm text-[var(--muted)]">Loading Tradovate...</div>;
+  }
+
+  if (!status.appConfigured) {
+    return (
+      <div className="card space-y-3">
+        <div>
+          <h2 className="font-semibold text-lg">Tradovate</h2>
+          <p className="text-sm text-[var(--muted)] mt-1">
+            Auto-import trades from your Tradovate account into Wendy.
+          </p>
+        </div>
+        <p className="text-sm text-[var(--muted)]">
+          Tradovate sync is not enabled on this site yet. The site owner needs to connect a
+          Tradovate API app once — then every user can connect with just their Tradovate username
+          and password.
+        </p>
+      </div>
+    );
   }
 
   return (
@@ -123,28 +150,25 @@ export function TradovateConnect() {
       <div>
         <h2 className="font-semibold text-lg">Tradovate</h2>
         <p className="text-sm text-[var(--muted)] mt-1">
-          Connect your Tradovate account to auto-import completed trades into Wendy.
+          Connect in 3 steps: pick your account type, enter your Tradovate login, then we import
+          your trades automatically.
         </p>
       </div>
 
-      {!status.appConfigured ? (
-        <p className="text-sm text-[var(--danger)]">
-          App credentials missing. Add TRADOVATE_APP_ID, TRADOVATE_CID, and TRADOVATE_SEC to{" "}
-          <code className="font-mono">.env.local</code> (from Tradovate API registration).
-        </p>
-      ) : null}
-
       {status.connected ? (
         <div className="space-y-3">
-          <p className="text-sm">
-            Connected as <span className="text-[var(--accent)]">{status.username}</span> (
-            {status.environment})
-          </p>
-          {status.lastSyncAt ? (
-            <p className="text-xs text-[var(--muted)]">
-              Last sync: {new Date(status.lastSyncAt).toLocaleString()}
+          <div className="rounded-xl border border-[color-mix(in_srgb,var(--accent)_25%,var(--card-border))] bg-[color-mix(in_srgb,var(--accent)_8%,var(--card))] px-4 py-3">
+            <p className="text-sm font-medium text-[var(--accent)]">Connected</p>
+            <p className="text-sm mt-1">
+              Signed in as <span className="font-semibold">{status.username}</span> ·{" "}
+              {status.environment === "demo" ? "Demo / eval account" : "Live account"}
             </p>
-          ) : null}
+            {status.lastSyncAt ? (
+              <p className="text-xs text-[var(--muted)] mt-1">
+                Last sync: {new Date(status.lastSyncAt).toLocaleString()}
+              </p>
+            ) : null}
+          </div>
           <div className="flex flex-wrap gap-2">
             <button type="button" className="btn btn-primary" onClick={onSync} disabled={syncing}>
               {syncing ? "Syncing..." : "Sync trades now"}
@@ -157,14 +181,14 @@ export function TradovateConnect() {
       ) : (
         <form onSubmit={onConnect} className="space-y-4">
           <div>
-            <label htmlFor="tv-env">Environment</label>
+            <label htmlFor="tv-env">Account type</label>
             <select
               id="tv-env"
               value={environment}
               onChange={(e) => setEnvironment(e.target.value as "demo" | "live")}
             >
-              <option value="demo">Demo / Evaluation (TopStep, prop evals)</option>
-              <option value="live">Live</option>
+              <option value="demo">Demo / evaluation (TopStep, prop firms)</option>
+              <option value="live">Live funded account</option>
             </select>
           </div>
           <div>
@@ -175,6 +199,7 @@ export function TradovateConnect() {
               onChange={(e) => setUsername(e.target.value)}
               required
               autoComplete="username"
+              placeholder="Your Tradovate username"
             />
           </div>
           <div>
@@ -186,28 +211,21 @@ export function TradovateConnect() {
               onChange={(e) => setPassword(e.target.value)}
               required
               autoComplete="current-password"
+              placeholder="Your Tradovate password"
             />
             <p className="text-xs text-[var(--muted)] mt-2">
-              Use your Tradovate login or dedicated API password. Stored encrypted in Supabase
-              (RLS-protected) for sync only.
+              Same login you use on Tradovate. We only use it to pull your fills — never shared
+              with other users.
             </p>
           </div>
-          <button type="submit" className="btn btn-primary" disabled={connecting || !status.appConfigured}>
-            {connecting ? "Connecting..." : "Connect Tradovate"}
+          <button type="submit" className="btn btn-primary w-full sm:w-auto" disabled={connecting || syncing}>
+            {connecting || syncing ? "Connecting..." : "Connect & import trades"}
           </button>
         </form>
       )}
 
       {error ? <p className="text-sm text-[var(--danger)]">{error}</p> : null}
       {message ? <p className="text-sm text-[var(--accent)]">{message}</p> : null}
-
-      <div className="text-xs text-[var(--muted)] space-y-1 border-t border-[var(--card-border)] pt-3">
-        <p className="font-semibold text-[var(--foreground)]">Setup steps</p>
-        <p>1. Register an API app at Tradovate → Application Settings → API Access</p>
-        <p>2. Add app ID, CID, and secret to your server .env.local</p>
-        <p>3. Run supabase/migrations/003_tradovate.sql if you have not already</p>
-        <p>4. Connect above, then click Sync trades</p>
-      </div>
     </div>
   );
 }

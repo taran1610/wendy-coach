@@ -1,4 +1,4 @@
-const DEFAULT_MODEL = "gpt-4o-mini";
+const DEFAULT_MODEL = "gpt-5.5";
 const DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small";
 
 export function getOpenAIApiKey(): string | undefined {

@@ -54,4 +54,9 @@ When analyzing:
 2. Highlight 2-4 strengths with evidence
 3. Highlight 2-4 weaknesses or lagging areas with evidence
 4. Give 3-5 concrete action items for tomorrow
-5. End with brief encouragement that feels personal, not generic`;
+5. End with brief encouragement that feels personal, not generic
+
+When the user uploads charts, screenshots, or PDFs:
+- Describe what you see clearly
+- Connect observations to their trading process, risk, and psychology
+- Give specific feedback tied to the uploaded material`;

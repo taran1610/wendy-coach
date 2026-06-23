@@ -11,8 +11,10 @@ import {
   upsertEmbedding,
 } from "./db";
 import { createEmbedding, getOpenAIClient, getActiveOpenAIModel, WENDY_SYSTEM_PROMPT } from "./openai";
+import { attachmentSummary, type ProcessedCoachAttachment } from "./coach-attachments";
 import { formatRetrievedContext, retrieveRelevantChunks } from "./rag";
 import { computeDayStats, computeTradeStats, statsSummary, todayISO } from "./stats";
+import type { ChatCompletionContentPart } from "openai/resources/chat/completions";
 import type { CoachReview } from "./types";
 
 function parseReviewResponse(content: string): Omit<CoachReview, "id" | "createdAt" | "date"> {
@@ -189,12 +191,51 @@ Encouragement:
   return saveReview({ date, ...parsed });
 }
 
+function buildUserMessageContent(
+  message: string,
+  attachments: ProcessedCoachAttachment[]
+): string | ChatCompletionContentPart[] {
+  const parts: ChatCompletionContentPart[] = [];
+
+  if (message.trim()) {
+    parts.push({ type: "text", text: message.trim() });
+  }
+
+  for (const file of attachments) {
+    if (file.kind === "image" && file.dataUrl) {
+      parts.push({
+        type: "image_url",
+        image_url: { url: file.dataUrl, detail: "auto" },
+      });
+      continue;
+    }
+
+    if (file.kind === "pdf" && file.text) {
+      parts.push({
+        type: "text",
+        text: `\n\n--- PDF attachment: ${file.name} ---\n${file.text}`,
+      });
+    }
+  }
+
+  if (parts.length === 0) {
+    return "Please analyze the attached file(s).";
+  }
+
+  if (parts.length === 1 && parts[0].type === "text") {
+    return parts[0].text;
+  }
+
+  return parts;
+}
+
 export async function chatWithWendy(
   message: string,
   date: string = todayISO(),
-  history: { role: "user" | "assistant"; content: string }[] = []
+  history: { role: "user" | "assistant"; content: string }[] = [],
+  attachments: ProcessedCoachAttachment[] = []
 ): Promise<string> {
-  const client = await getOpenAIClient();
+  const client = getOpenAIClient();
   if (!client) {
     throw new Error("OpenAI API key not configured. Add OPENAI_API_KEY to .env.local.");
   }
@@ -202,7 +243,8 @@ export async function chatWithWendy(
   const trades = await listTrades(date);
   const journal = await getJournalForDate(date);
   const dayStats = computeDayStats(date, trades);
-  const queryEmbedding = await createEmbedding(message);
+  const ragQuery = [message.trim(), attachmentSummary(attachments)].filter(Boolean).join("\n");
+  const queryEmbedding = await createEmbedding(ragQuery || message || "trading coaching");
   const relevant = retrieveRelevantChunks(queryEmbedding, await listEmbeddings(), 8);
 
   const contextBlock = `Today's context (${date}):
@@ -223,7 +265,7 @@ ${formatRetrievedContext(relevant)}`;
         role: entry.role as "user" | "assistant",
         content: entry.content,
       })),
-      { role: "user", content: message },
+      { role: "user", content: buildUserMessageContent(message, attachments) },
     ],
     temperature: 0.8,
   });

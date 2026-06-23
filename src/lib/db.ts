@@ -9,7 +9,7 @@ import type {
 } from "./types";
 
 const DEFAULT_SETTINGS: Settings = {
-  openaiModel: "gpt-4o-mini",
+  openaiModel: "gpt-5.5",
   embeddingModel: "text-embedding-3-small",
 };
 

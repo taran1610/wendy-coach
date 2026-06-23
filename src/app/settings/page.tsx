@@ -22,10 +22,10 @@ export default function SettingsPage() {
     () => "https://your-domain/auth/callback"
   );
   const [form, setForm] = useState<SettingsState>({
-    openaiModel: "gpt-4o-mini",
+    openaiModel: "gpt-5.5",
     embeddingModel: "text-embedding-3-small",
     serverOpenAIConfigured: false,
-    activeOpenAIModel: "gpt-4o-mini",
+    activeOpenAIModel: "gpt-5.5",
     activeEmbeddingModel: "text-embedding-3-small",
   });
 
@@ -113,8 +113,9 @@ export default function SettingsPage() {
               value={form.openaiModel}
               onChange={(e) => setForm((f) => ({ ...f, openaiModel: e.target.value }))}
             >
-              <option value="gpt-4o-mini">gpt-4o-mini (recommended)</option>
+              <option value="gpt-5.5">gpt-5.5 (recommended)</option>
               <option value="gpt-4o">gpt-4o</option>
+              <option value="gpt-4o-mini">gpt-4o-mini</option>
               <option value="gpt-4.1-mini">gpt-4.1-mini</option>
               <option value="gpt-4.1">gpt-4.1</option>
             </select>
