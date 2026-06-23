@@ -17,7 +17,7 @@ export function SignOutButton() {
     <button
       type="button"
       onClick={signOut}
-      className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] mt-6 px-3 py-2 rounded-lg hover:bg-[#152033] w-full text-left"
+      className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] mt-6 px-3 py-2 rounded-lg hover:bg-[var(--hover-bg)] w-full text-left"
     >
       Sign out
     </button>

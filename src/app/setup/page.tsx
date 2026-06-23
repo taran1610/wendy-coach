@@ -68,7 +68,7 @@ export default function SetupPage() {
           </ol>
         )}
 
-        <pre className="text-xs bg-[#0a101a] border border-[var(--card-border)] rounded-lg p-3 overflow-x-auto">
+        <pre className="text-xs bg-[var(--surface-muted)] border border-[var(--card-border)] rounded-lg p-3 overflow-x-auto">
 {`NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 SUPABASE_SERVICE_ROLE_KEY=eyJ...

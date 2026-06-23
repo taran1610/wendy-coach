@@ -84,7 +84,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center p-6">
       <div className="card w-full max-w-md space-y-6">
         <div className="text-center">
-          <div className="mx-auto h-14 w-14 rounded-2xl bg-gradient-to-br from-[var(--accent)] to-[var(--gold)] flex items-center justify-center text-[#042f2e] font-bold text-2xl mb-4">
+          <div className="mx-auto h-14 w-14 rounded-2xl bg-gradient-to-br from-[var(--accent)] to-[var(--gold)] flex items-center justify-center text-[var(--accent-on-gradient)] font-bold text-2xl mb-4">
             W
           </div>
           <h1 className="text-2xl font-semibold">Wendy Coach</h1>

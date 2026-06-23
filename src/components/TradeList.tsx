@@ -29,7 +29,7 @@ export function TradeList({ trades }: { trades: Trade[] }) {
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold text-lg">{trade.symbol}</h3>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-[#152033] capitalize">
+                <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--hover-bg)] capitalize">
                   {trade.direction}
                 </span>
                 <span className="text-xs text-[var(--muted)] font-mono">{trade.date}</span>

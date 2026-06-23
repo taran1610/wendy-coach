@@ -63,7 +63,7 @@ export function LandingPage() {
       <header className="sticky top-0 z-50 border-b border-[var(--card-border)] bg-[color-mix(in_srgb,var(--background)_85%,transparent)] backdrop-blur-md">
         <div className="max-w-6xl mx-auto px-5 py-4 flex items-center justify-between gap-4">
           <Link href="/" className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-[var(--accent)] to-[var(--gold)] flex items-center justify-center text-[#042f2e] font-bold">
+            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-[var(--accent)] to-[var(--gold)] flex items-center justify-center text-[var(--accent-on-gradient)] font-bold">
               W
             </div>
             <span className="font-semibold">Wendy Coach</span>
@@ -137,7 +137,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section className="border-y border-[var(--card-border)] bg-[color-mix(in_srgb,var(--card)_40%,transparent)]">
+      <section className="border-y border-[var(--card-border)] bg-[var(--surface-muted)]">
         <div className="max-w-6xl mx-auto px-5 py-20">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>

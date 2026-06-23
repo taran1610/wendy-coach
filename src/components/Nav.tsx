@@ -29,10 +29,10 @@ export function Nav() {
     : links;
 
   return (
-    <aside className="w-full lg:w-64 shrink-0 border-b lg:border-b-0 lg:border-r border-[var(--card-border)] bg-[color-mix(in_srgb,var(--card)_80%,transparent)]">
+    <aside className="w-full lg:w-64 shrink-0 border-b lg:border-b-0 lg:border-r border-[var(--card-border)] bg-[var(--surface-muted)]">
       <div className="p-5 lg:p-6">
         <div className="flex items-center gap-3 mb-8">
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[var(--accent)] to-[var(--gold)] flex items-center justify-center text-[#042f2e] font-bold text-lg">
+          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[var(--accent)] to-[var(--gold)] flex items-center justify-center text-[var(--accent-on-gradient)] font-bold text-lg">
             W
           </div>
           <div>
@@ -51,8 +51,8 @@ export function Nav() {
                 href={link.href}
                 className={`flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm whitespace-nowrap transition-colors ${
                   active
-                    ? "bg-[color-mix(in_srgb,var(--accent)_15%,transparent)] text-[var(--accent)] border border-[color-mix(in_srgb,var(--accent)_30%,transparent)]"
-                    : "text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[#152033]"
+                    ? "bg-[color-mix(in_srgb,var(--accent)_12%,transparent)] text-[var(--accent)] border border-[color-mix(in_srgb,var(--accent)_25%,transparent)]"
+                    : "text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-[var(--hover-bg)]"
                 }`}
               >
                 <span>{link.icon}</span>

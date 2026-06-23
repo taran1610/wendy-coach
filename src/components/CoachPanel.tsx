@@ -75,7 +75,7 @@ export function CoachPanel() {
         <div className="mx-auto max-w-3xl px-4 py-8 space-y-6">
           {messages.length === 0 && !loading ? (
             <div className="flex flex-col items-center justify-center min-h-[50vh] text-center px-4">
-              <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-[var(--accent)] to-[var(--gold)] flex items-center justify-center text-[#042f2e] font-bold text-2xl mb-4">
+              <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-[var(--accent)] to-[var(--gold)] flex items-center justify-center text-[var(--accent-on-gradient)] font-bold text-2xl mb-4">
                 W
               </div>
               <h1 className="text-2xl font-semibold mb-2">Wendy Coach</h1>
@@ -92,14 +92,14 @@ export function CoachPanel() {
               className={`flex gap-4 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
             >
               {msg.role === "assistant" ? (
-                <div className="h-8 w-8 shrink-0 rounded-lg bg-gradient-to-br from-[var(--accent)] to-[var(--gold)] flex items-center justify-center text-[#042f2e] font-bold text-sm">
+                <div className="h-8 w-8 shrink-0 rounded-lg bg-gradient-to-br from-[var(--accent)] to-[var(--gold)] flex items-center justify-center text-[var(--accent-on-gradient)] font-bold text-sm">
                   W
                 </div>
               ) : null}
               <div
                 className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
                   msg.role === "user"
-                    ? "bg-[#1a2438] text-[var(--foreground)]"
+                    ? "bg-[var(--hover-bg)] text-[var(--foreground)]"
                     : "bg-transparent text-[var(--foreground)]"
                 }`}
               >
@@ -110,7 +110,7 @@ export function CoachPanel() {
 
           {loading ? (
             <div className="flex gap-4">
-              <div className="h-8 w-8 shrink-0 rounded-lg bg-gradient-to-br from-[var(--accent)] to-[var(--gold)] flex items-center justify-center text-[#042f2e] font-bold text-sm">
+              <div className="h-8 w-8 shrink-0 rounded-lg bg-gradient-to-br from-[var(--accent)] to-[var(--gold)] flex items-center justify-center text-[var(--accent-on-gradient)] font-bold text-sm">
                 W
               </div>
               <p className="text-sm text-[var(--muted)] py-2">Wendy is thinking...</p>
@@ -126,7 +126,7 @@ export function CoachPanel() {
       <div className="border-t border-[var(--card-border)] bg-[color-mix(in_srgb,var(--background)_95%,transparent)] backdrop-blur-sm p-4">
         <form
           onSubmit={sendMessage}
-          className="mx-auto max-w-3xl flex items-end gap-3 rounded-2xl border border-[var(--card-border)] bg-[#0a101a] px-4 py-3 shadow-lg"
+          className="mx-auto max-w-3xl flex items-end gap-3 rounded-2xl border border-[var(--card-border)] bg-[var(--input-bg)] px-4 py-3 shadow-sm"
         >
           <textarea
             ref={textareaRef}

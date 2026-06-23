@@ -1,15 +1,19 @@
 @import "tailwindcss";
 
 :root {
-  --background: #070b12;
-  --foreground: #e8edf5;
-  --card: #0f1623;
-  --card-border: #1e2a3d;
-  --muted: #8b9bb4;
-  --accent: #34d399;
-  --accent-dim: #059669;
-  --danger: #f87171;
-  --gold: #fbbf24;
+  --background: #ffffff;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-border: #e2e8f0;
+  --muted: #64748b;
+  --accent: #059669;
+  --accent-dim: #047857;
+  --danger: #dc2626;
+  --gold: #ca8a04;
+  --input-bg: #ffffff;
+  --hover-bg: #f1f5f9;
+  --surface-muted: #f8fafc;
+  --accent-on-gradient: #ffffff;
 }
 
 @theme inline {
@@ -31,7 +35,7 @@
 }
 
 body {
-  background: radial-gradient(ellipse at top, #0f172a 0%, var(--background) 55%);
+  background: radial-gradient(ellipse at top, #f8fafc 0%, var(--background) 55%);
   color: var(--foreground);
   min-height: 100vh;
 }
@@ -39,7 +43,7 @@ body {
 input,
 textarea,
 select {
-  background: #0a101a;
+  background: var(--input-bg);
   border: 1px solid var(--card-border);
   color: var(--foreground);
   border-radius: 0.625rem;
@@ -51,8 +55,8 @@ select {
 input:focus,
 textarea:focus,
 select:focus {
-  outline: 2px solid color-mix(in srgb, var(--accent) 40%, transparent);
-  border-color: var(--accent-dim);
+  outline: 2px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  border-color: var(--accent);
 }
 
 textarea {
@@ -68,11 +72,11 @@ label {
 }
 
 .card {
-  background: color-mix(in srgb, var(--card) 92%, transparent);
+  background: var(--card);
   border: 1px solid var(--card-border);
   border-radius: 1rem;
   padding: 1.25rem;
-  backdrop-filter: blur(8px);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--foreground) 5%, transparent);
 }
 
 .btn {
@@ -91,27 +95,27 @@ label {
 
 .btn-primary {
   background: linear-gradient(135deg, var(--accent), var(--accent-dim));
-  color: #042f2e;
+  color: var(--accent-on-gradient);
 }
 
 .btn-primary:hover {
-  filter: brightness(1.08);
+  filter: brightness(1.05);
 }
 
 .btn-secondary {
-  background: #152033;
+  background: var(--surface-muted);
   color: var(--foreground);
   border: 1px solid var(--card-border);
 }
 
 .btn-secondary:hover {
-  background: #1a2840;
+  background: var(--hover-bg);
 }
 
 .btn-danger {
-  background: color-mix(in srgb, var(--danger) 15%, transparent);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
   color: var(--danger);
-  border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent);
+  border: 1px solid color-mix(in srgb, var(--danger) 25%, transparent);
 }
 
 .pnl-positive {
