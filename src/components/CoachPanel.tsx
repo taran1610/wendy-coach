@@ -1,184 +1,157 @@
 "use client";
 
-import { FormEvent, useState } from "react";
-import type { CoachReview } from "@/lib/types";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { todayISO } from "@/lib/stats";
 
-export function CoachPanel({ initialReview }: { initialReview?: CoachReview | null }) {
-  const [date, setDate] = useState(todayISO());
-  const [review, setReview] = useState<CoachReview | null>(initialReview ?? null);
+type ChatMessage = { role: "user" | "assistant"; content: string };
+
+export function CoachPanel() {
+  const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [chatInput, setChatInput] = useState("");
-  const [chatLoading, setChatLoading] = useState(false);
-  const [messages, setMessages] = useState<{ role: "user" | "wendy"; text: string }[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  async function generateReview() {
-    setLoading(true);
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, loading]);
+
+  function resizeTextarea() {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
+  }
+
+  async function sendMessage(e?: FormEvent) {
+    e?.preventDefault();
+    const text = input.trim();
+    if (!text || loading) return;
+
+    const userMessage: ChatMessage = { role: "user", content: text };
+    const nextMessages = [...messages, userMessage];
+
+    setInput("");
     setError("");
+    setMessages(nextMessages);
+    setLoading(true);
+    resizeTextarea();
 
     const res = await fetch("/api/coach", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ date }),
+      body: JSON.stringify({
+        message: text,
+        date: todayISO(),
+        history: messages.map((m) => ({ role: m.role, content: m.content })),
+      }),
     });
 
     setLoading(false);
 
     if (!res.ok) {
       const data = await res.json();
-      setError(data.error ?? "Failed to generate review");
-      return;
-    }
-
-    setReview(await res.json());
-  }
-
-  async function sendChat(e: FormEvent) {
-    e.preventDefault();
-    if (!chatInput.trim()) return;
-
-    const userMsg = chatInput.trim();
-    setChatInput("");
-    setMessages((m) => [...m, { role: "user", text: userMsg }]);
-    setChatLoading(true);
-    setError("");
-
-    const res = await fetch("/api/coach", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "chat", message: userMsg, date }),
-    });
-
-    setChatLoading(false);
-
-    if (!res.ok) {
-      const data = await res.json();
-      setError(data.error ?? "Chat failed");
+      setError(data.error ?? "Something went wrong. Try again.");
+      setMessages(messages);
+      setInput(text);
       return;
     }
 
     const data = await res.json();
-    setMessages((m) => [...m, { role: "wendy", text: data.reply }]);
+    setMessages([...nextMessages, { role: "assistant", content: data.reply }]);
+  }
+
+  function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      void sendMessage();
+    }
   }
 
   return (
-    <div className="space-y-6">
-      <div className="card">
-        <div className="flex flex-wrap items-end gap-4">
-          <div>
-            <label htmlFor="review-date">Review date</label>
-            <input
-              id="review-date"
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-            />
-          </div>
-          <button type="button" className="btn btn-primary" onClick={generateReview} disabled={loading}>
-            {loading ? "Wendy is analyzing..." : "Generate End-of-Day Review"}
-          </button>
-        </div>
-        <p className="text-xs text-[var(--muted)] mt-3">
-          Wendy uses RAG — she retrieves relevant past trades & journals, then coaches you on
-          strengths, weaknesses, and action items.
-        </p>
-        {error ? <p className="text-sm text-[var(--danger)] mt-3">{error}</p> : null}
-      </div>
-
-      {review ? (
-        <div className="space-y-4">
-          <article className="card border-[color-mix(in_srgb,var(--accent)_25%,var(--card-border))]">
-            <p className="text-xs uppercase tracking-wider text-[var(--gold)] mb-2">
-              Wendy&apos;s Daily Review — {review.date}
-            </p>
-            <p className="leading-relaxed">{review.summary}</p>
-          </article>
-
-          <div className="grid md:grid-cols-2 gap-4">
-            <article className="card">
-              <h3 className="font-semibold text-[var(--accent)] mb-3">Strengths</h3>
-              <ul className="space-y-2 text-sm">
-                {review.strengths.map((s) => (
-                  <li key={s} className="flex gap-2">
-                    <span className="text-[var(--accent)]">+</span>
-                    <span>{s}</span>
-                  </li>
-                ))}
-              </ul>
-            </article>
-
-            <article className="card">
-              <h3 className="font-semibold text-[var(--danger)] mb-3">Where You&apos;re Lagging</h3>
-              <ul className="space-y-2 text-sm">
-                {review.weaknesses.map((s) => (
-                  <li key={s} className="flex gap-2">
-                    <span className="text-[var(--danger)]">−</span>
-                    <span>{s}</span>
-                  </li>
-                ))}
-              </ul>
-            </article>
-          </div>
-
-          <article className="card">
-            <h3 className="font-semibold text-[var(--gold)] mb-3">Action Items for Tomorrow</h3>
-            <ul className="space-y-2 text-sm">
-              {review.actionItems.map((s, i) => (
-                <li key={s} className="flex gap-2">
-                  <span className="text-[var(--muted)] font-mono">{i + 1}.</span>
-                  <span>{s}</span>
-                </li>
-              ))}
-            </ul>
-          </article>
-
-          <article className="card bg-[color-mix(in_srgb,var(--accent)_8%,var(--card))]">
-            <p className="text-sm italic leading-relaxed">{review.encouragement}</p>
-          </article>
-        </div>
-      ) : null}
-
-      <div className="card space-y-4">
-        <h2 className="font-semibold">Chat with Wendy</h2>
-        <div className="space-y-3 max-h-96 overflow-y-auto">
-          {messages.length === 0 ? (
-            <p className="text-sm text-[var(--muted)]">
-              Ask Wendy anything — &quot;Why do I keep losing on reversals?&quot; or &quot;What
-              should I focus on tomorrow?&quot;
-            </p>
+    <div className="flex flex-col h-[calc(100dvh-2.5rem)] lg:h-[calc(100dvh-4rem)] -m-5 lg:-m-8">
+      <div className="flex-1 overflow-y-auto">
+        <div className="mx-auto max-w-3xl px-4 py-8 space-y-6">
+          {messages.length === 0 && !loading ? (
+            <div className="flex flex-col items-center justify-center min-h-[50vh] text-center px-4">
+              <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-[var(--accent)] to-[var(--gold)] flex items-center justify-center text-[#042f2e] font-bold text-2xl mb-4">
+                W
+              </div>
+              <h1 className="text-2xl font-semibold mb-2">Wendy Coach</h1>
+              <p className="text-[var(--muted)] max-w-md text-sm">
+                Ask anything about your trading — mindset, setups, mistakes, or what to focus on
+                tomorrow.
+              </p>
+            </div>
           ) : null}
+
           {messages.map((msg, i) => (
             <div
               key={i}
-              className={`rounded-xl p-3 text-sm ${
-                msg.role === "wendy"
-                  ? "bg-[color-mix(in_srgb,var(--accent)_10%,#152033)] border border-[color-mix(in_srgb,var(--accent)_20%,transparent)]"
-                  : "bg-[#152033]"
-              }`}
+              className={`flex gap-4 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
             >
-              <p className="text-xs text-[var(--muted)] mb-1">
-                {msg.role === "wendy" ? "Wendy" : "You"}
-              </p>
-              <p className="whitespace-pre-wrap">{msg.text}</p>
+              {msg.role === "assistant" ? (
+                <div className="h-8 w-8 shrink-0 rounded-lg bg-gradient-to-br from-[var(--accent)] to-[var(--gold)] flex items-center justify-center text-[#042f2e] font-bold text-sm">
+                  W
+                </div>
+              ) : null}
+              <div
+                className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
+                  msg.role === "user"
+                    ? "bg-[#1a2438] text-[var(--foreground)]"
+                    : "bg-transparent text-[var(--foreground)]"
+                }`}
+              >
+                {msg.content}
+              </div>
             </div>
           ))}
-          {chatLoading ? (
-            <p className="text-sm text-[var(--muted)]">Wendy is thinking...</p>
-          ) : null}
-        </div>
 
-        <form onSubmit={sendChat} className="flex gap-2">
-          <input
-            value={chatInput}
-            onChange={(e) => setChatInput(e.target.value)}
-            placeholder="Ask Wendy for coaching advice..."
-            disabled={chatLoading}
+          {loading ? (
+            <div className="flex gap-4">
+              <div className="h-8 w-8 shrink-0 rounded-lg bg-gradient-to-br from-[var(--accent)] to-[var(--gold)] flex items-center justify-center text-[#042f2e] font-bold text-sm">
+                W
+              </div>
+              <p className="text-sm text-[var(--muted)] py-2">Wendy is thinking...</p>
+            </div>
+          ) : null}
+
+          {error ? <p className="text-sm text-[var(--danger)] text-center">{error}</p> : null}
+
+          <div ref={bottomRef} />
+        </div>
+      </div>
+
+      <div className="border-t border-[var(--card-border)] bg-[color-mix(in_srgb,var(--background)_95%,transparent)] backdrop-blur-sm p-4">
+        <form
+          onSubmit={sendMessage}
+          className="mx-auto max-w-3xl flex items-end gap-3 rounded-2xl border border-[var(--card-border)] bg-[#0a101a] px-4 py-3 shadow-lg"
+        >
+          <textarea
+            ref={textareaRef}
+            value={input}
+            onChange={(e) => {
+              setInput(e.target.value);
+              resizeTextarea();
+            }}
+            onKeyDown={onKeyDown}
+            placeholder="Message Wendy..."
+            rows={1}
+            disabled={loading}
+            className="min-h-[24px] max-h-[200px] resize-none border-0 bg-transparent p-0 focus:outline-none focus:ring-0"
           />
-          <button type="submit" className="btn btn-secondary shrink-0" disabled={chatLoading}>
+          <button
+            type="submit"
+            className="btn btn-primary shrink-0 rounded-xl px-4 py-2 text-sm disabled:opacity-40"
+            disabled={loading || !input.trim()}
+          >
             Send
           </button>
         </form>
+        <p className="mx-auto max-w-3xl mt-2 text-center text-xs text-[var(--muted)]">
+          Wendy uses your trades and journal history to give personalized coaching.
+        </p>
       </div>
     </div>
   );

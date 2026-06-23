@@ -191,7 +191,8 @@ Encouragement:
 
 export async function chatWithWendy(
   message: string,
-  date: string = todayISO()
+  date: string = todayISO(),
+  history: { role: "user" | "assistant"; content: string }[] = []
 ): Promise<string> {
   const client = await getOpenAIClient();
   if (!client) {
@@ -204,22 +205,25 @@ export async function chatWithWendy(
   const queryEmbedding = await createEmbedding(message);
   const relevant = retrieveRelevantChunks(queryEmbedding, await listEmbeddings(), 8);
 
-  const userPrompt = `User message: ${message}
-
-Today's context (${date}):
+  const contextBlock = `Today's context (${date}):
 ${statsSummary(dayStats)}
-${journal ? journalToText(journal) : ""}
+${journal ? journalToText(journal) : "No journal entry today."}
 
-Retrieved memories:
-${formatRetrievedContext(relevant)}
-
-Reply as Wendy — helpful, specific, and honest. Keep it conversational.`;
+Retrieved memories from trading history:
+${formatRetrievedContext(relevant)}`;
 
   const completion = await client.chat.completions.create({
     model: await getActiveOpenAIModel(),
     messages: [
-      { role: "system", content: WENDY_SYSTEM_PROMPT },
-      { role: "user", content: userPrompt },
+      {
+        role: "system",
+        content: `${WENDY_SYSTEM_PROMPT}\n\nUse the trader's data below when relevant:\n\n${contextBlock}`,
+      },
+      ...history.map((entry) => ({
+        role: entry.role as "user" | "assistant",
+        content: entry.content,
+      })),
+      { role: "user", content: message },
     ],
     temperature: 0.8,
   });
