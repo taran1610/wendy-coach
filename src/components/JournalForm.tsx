@@ -96,7 +96,7 @@ export function JournalForm({ initial }: { initial?: JournalEntry }) {
           />
         </div>
         <div>
-          <label htmlFor="goals">Tomorrow's Goals</label>
+          <label htmlFor="goals">Tomorrow&apos;s Goals</label>
           <input
             id="goals"
             placeholder="Max 2 trades, wait for A+ setup..."

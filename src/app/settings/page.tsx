@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useState, useSyncExternalStore } from "react";
 import { TradovateConnect } from "@/components/TradovateConnect";
 
 interface SettingsState {
@@ -16,6 +16,11 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
+  const authCallbackUrl = useSyncExternalStore(
+    () => () => {},
+    () => `${window.location.origin}/auth/callback`,
+    () => "https://your-domain/auth/callback"
+  );
   const [form, setForm] = useState<SettingsState>({
     openaiModel: "gpt-4o-mini",
     embeddingModel: "text-embedding-3-small",
@@ -142,7 +147,7 @@ export default function SettingsPage() {
           <li>Add Google OAuth Client ID + Secret from Google Cloud Console</li>
           <li>
             Supabase → Authentication → URL Configuration → add redirect:{" "}
-            <code className="font-mono">http://localhost:3000/auth/callback</code>
+            <code className="font-mono">{authCallbackUrl || "https://your-domain/auth/callback"}</code>
           </li>
         </ol>
       </div>

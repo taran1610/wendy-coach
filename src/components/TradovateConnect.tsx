@@ -26,8 +26,8 @@ export function TradovateConnect() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  async function loadStatus() {
-    setLoading(true);
+  async function loadStatus(showLoading = true) {
+    if (showLoading) setLoading(true);
     const res = await fetch("/api/tradovate/status");
     const data = await res.json();
     if (data.error) setError(data.error);
@@ -40,7 +40,25 @@ export function TradovateConnect() {
   }
 
   useEffect(() => {
-    loadStatus();
+    let cancelled = false;
+
+    (async () => {
+      const res = await fetch("/api/tradovate/status");
+      const data = await res.json();
+      if (cancelled) return;
+
+      if (data.error) setError(data.error);
+      else {
+        setStatus(data);
+        if (data.username) setUsername(data.username);
+        if (data.environment) setEnvironment(data.environment);
+      }
+      setLoading(false);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   async function onConnect(e: FormEvent) {
