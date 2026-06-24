@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { todayISO } from "@/lib/stats";
+import { downloadTextAsPdf, pdfFilename, userRequestedPdf } from "@/lib/pdf-export";
 
 type MessageAttachment = {
   name: string;
@@ -138,11 +139,20 @@ export function CoachPanel() {
     });
   }
 
+  async function downloadReplyAsPdf(promptHint: string, content: string) {
+    try {
+      await downloadTextAsPdf(pdfFilename(promptHint), "Wendy Coach", content);
+    } catch {
+      setError("Could not create PDF. Try again or copy the message text.");
+    }
+  }
+
   async function sendMessage(e?: FormEvent) {
     e?.preventDefault();
     const text = input.trim();
     if ((!text && pendingFiles.length === 0) || loading) return;
 
+    const wantsPdf = userRequestedPdf(text);
     const sentAttachments: MessageAttachment[] = pendingFiles.map((item) => ({
       name: item.file.name,
       kind: fileKind(item.file),
@@ -216,7 +226,12 @@ export function CoachPanel() {
       return;
     }
 
-    setMessages([...nextMessages, { role: "assistant", content: data.reply ?? "" }]);
+    const reply = data.reply ?? "";
+    setMessages([...nextMessages, { role: "assistant", content: reply }]);
+
+    if (wantsPdf && reply) {
+      await downloadReplyAsPdf(text, reply);
+    }
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -240,7 +255,7 @@ export function CoachPanel() {
               <h1 className="text-2xl font-semibold mb-2">Wendy Coach</h1>
               <p className="text-[var(--muted)] max-w-md text-sm">
                 Ask about your trading, upload chart screenshots, or attach PDFs for Wendy to
-                analyze.
+                analyze. Download any reply as a PDF, or say &quot;generate a PDF&quot; to auto-download.
               </p>
             </div>
           ) : null}
@@ -285,6 +300,15 @@ export function CoachPanel() {
                   </div>
                 ) : null}
                 {msg.content}
+                {msg.role === "assistant" ? (
+                  <button
+                    type="button"
+                    className="mt-3 text-xs text-[var(--accent)] hover:underline block"
+                    onClick={() => void downloadReplyAsPdf(msg.content, msg.content)}
+                  >
+                    Download PDF
+                  </button>
+                ) : null}
               </div>
             </div>
           ))}
