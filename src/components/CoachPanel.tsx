@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { downloadTextAsPdf, userRequestedPdf } from "@/lib/pdf-export";
+import { todayISO } from "@/lib/stats";
 
 type MessageAttachment = {
   name: string;
@@ -68,15 +68,6 @@ function fileKind(file: File): "image" | "pdf" {
   return file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")
     ? "pdf"
     : "image";
-}
-
-function pdfFilename(text: string): string {
-  const slug = text
-    .slice(0, 40)
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-  return slug ? `wendy-${slug}` : "wendy-document";
 }
 
 export function CoachPanel() {
@@ -152,7 +143,6 @@ export function CoachPanel() {
     const text = input.trim();
     if ((!text && pendingFiles.length === 0) || loading) return;
 
-    const wantsPdf = userRequestedPdf(text);
     const sentAttachments: MessageAttachment[] = pendingFiles.map((item) => ({
       name: item.file.name,
       kind: fileKind(item.file),
@@ -181,6 +171,7 @@ export function CoachPanel() {
 
     const formData = new FormData();
     formData.append("message", text);
+    formData.append("date", todayISO());
     formData.append(
       "history",
       JSON.stringify(messages.map((m) => ({ role: m.role, content: m.content })))
@@ -198,9 +189,16 @@ export function CoachPanel() {
     try {
       data = await res.json();
     } catch {
-      setError(res.ok ? "Unexpected server response." : "Upload failed. Try a smaller file.");
+      setError(res.ok ? "Unexpected server response." : "Upload failed. Try a smaller image or PDF.");
       setMessages(messages);
       setInput(text);
+      setPendingFiles(
+        filesToSend.map((file) => ({
+          id: `${file.name}-${file.lastModified}-${Math.random()}`,
+          file,
+          previewUrl: file.type.startsWith("image/") ? URL.createObjectURL(file) : undefined,
+        }))
+      );
       return;
     }
 
@@ -208,15 +206,17 @@ export function CoachPanel() {
       setError(data.error ?? "Something went wrong. Try again.");
       setMessages(messages);
       setInput(text);
+      setPendingFiles(
+        filesToSend.map((file) => ({
+          id: `${file.name}-${file.lastModified}-${Math.random()}`,
+          file,
+          previewUrl: file.type.startsWith("image/") ? URL.createObjectURL(file) : undefined,
+        }))
+      );
       return;
     }
 
-    const reply = data.reply ?? "";
-    setMessages([...nextMessages, { role: "assistant", content: reply }]);
-
-    if (wantsPdf && reply) {
-      await downloadTextAsPdf(pdfFilename(text), "Wendy Coach", reply);
-    }
+    setMessages([...nextMessages, { role: "assistant", content: data.reply ?? "" }]);
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -239,8 +239,8 @@ export function CoachPanel() {
               </div>
               <h1 className="text-2xl font-semibold mb-2">Wendy Coach</h1>
               <p className="text-[var(--muted)] max-w-md text-sm">
-                Chat with Wendy like ChatGPT. Ask anything, attach files, or say &quot;generate a
-                PDF&quot; to download Wendy&apos;s reply as a PDF.
+                Ask about your trading, upload chart screenshots, or attach PDFs for Wendy to
+                analyze.
               </p>
             </div>
           ) : null}
@@ -285,21 +285,6 @@ export function CoachPanel() {
                   </div>
                 ) : null}
                 {msg.content}
-                {msg.role === "assistant" ? (
-                  <button
-                    type="button"
-                    className="mt-3 text-xs text-[var(--accent)] hover:underline block"
-                    onClick={() =>
-                      void downloadTextAsPdf(
-                        pdfFilename(msg.content),
-                        "Wendy Coach",
-                        msg.content
-                      )
-                    }
-                  >
-                    Download PDF
-                  </button>
-                ) : null}
               </div>
             </div>
           ))}
@@ -364,9 +349,9 @@ export function CoachPanel() {
             className="btn btn-secondary shrink-0 rounded-xl px-3 py-2 text-sm"
             onClick={() => fileInputRef.current?.click()}
             disabled={loading}
-            aria-label="Attach file"
+            aria-label="Attach PDF or image"
           >
-            +
+            Attach
           </button>
           <textarea
             ref={textareaRef}
@@ -376,7 +361,7 @@ export function CoachPanel() {
               resizeTextarea();
             }}
             onKeyDown={onKeyDown}
-            placeholder="Message Wendy..."
+            placeholder="Message Wendy or attach a chart/PDF..."
             rows={1}
             disabled={loading}
             className="min-h-[24px] max-h-[200px] flex-1 resize-none border-0 bg-transparent p-0 focus:outline-none focus:ring-0"
@@ -389,6 +374,9 @@ export function CoachPanel() {
             Send
           </button>
         </form>
+        <p className="mx-auto max-w-3xl mt-2 text-center text-xs text-[var(--muted)]">
+          Upload PDFs or images (PNG, JPG, WEBP). Max 3 files, 4 MB each. Powered by GPT-5.5.
+        </p>
       </div>
     </div>
   );

@@ -12,7 +12,7 @@ import {
 } from "./db";
 import { createEmbedding, getOpenAIClient, getActiveOpenAIModel, WENDY_SYSTEM_PROMPT } from "./openai";
 import { getChatCompletionOptions } from "./openai-config";
-import { type ProcessedCoachAttachment } from "./coach-attachments";
+import { attachmentSummary, type ProcessedCoachAttachment } from "./coach-attachments";
 import { formatRetrievedContext, retrieveRelevantChunks } from "./rag";
 import { computeDayStats, computeTradeStats, statsSummary, todayISO } from "./stats";
 import type { ChatCompletionContentPart } from "openai/resources/chat/completions";
@@ -218,14 +218,6 @@ function buildUserMessageContent(
         type: "text",
         text: `\n\n--- PDF attachment: ${file.name} ---\n${file.text}`,
       });
-      continue;
-    }
-
-    if (file.kind === "image" && file.dataUrl && file.mimeType === "image/png") {
-      parts.push({
-        type: "image_url",
-        image_url: { url: file.dataUrl, detail: "auto" },
-      });
     }
   }
 
@@ -240,13 +232,9 @@ function buildUserMessageContent(
   return parts;
 }
 
-const CHAT_SYSTEM_PROMPT = `You are Wendy, a helpful AI assistant. Chat naturally like ChatGPT — clear, friendly, and direct.
-
-When the user asks you to generate, create, or export a PDF, write the full document content in your reply using headings and paragraphs. That text will be turned into a downloadable PDF automatically.`;
-
 export async function chatWithWendy(
   message: string,
-  _date?: string,
+  date: string = todayISO(),
   history: { role: "user" | "assistant"; content: string }[] = [],
   attachments: ProcessedCoachAttachment[] = []
 ): Promise<string> {
@@ -255,12 +243,29 @@ export async function chatWithWendy(
     throw new Error("OpenAI API key not configured. Add OPENAI_API_KEY to .env.local.");
   }
 
+  const trades = await listTrades(date);
+  const journal = await getJournalForDate(date);
+  const dayStats = computeDayStats(date, trades);
+  const ragQuery = [message.trim(), attachmentSummary(attachments)].filter(Boolean).join("\n");
+  const queryEmbedding = await createEmbedding(ragQuery || message || "trading coaching");
+  const relevant = retrieveRelevantChunks(queryEmbedding, await listEmbeddings(), 8);
+
+  const contextBlock = `Today's context (${date}):
+${statsSummary(dayStats)}
+${journal ? journalToText(journal) : "No journal entry today."}
+
+Retrieved memories from trading history:
+${formatRetrievedContext(relevant)}`;
+
   const model = await getActiveOpenAIModel();
 
   const completion = await client.chat.completions.create({
     model,
     messages: [
-      { role: "system", content: CHAT_SYSTEM_PROMPT },
+      {
+        role: "system",
+        content: `${WENDY_SYSTEM_PROMPT}\n\nUse the trader's data below when relevant:\n\n${contextBlock}`,
+      },
       ...history.map((entry) => ({
         role: entry.role as "user" | "assistant",
         content: entry.content,
