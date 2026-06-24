@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { chatWithWendy } from "@/lib/coach";
-import { processCoachAttachments, type CoachAttachmentInput } from "@/lib/coach-attachments";
+import { processCoachAttachments, resolveAttachmentMimeType, type CoachAttachmentInput } from "@/lib/coach-attachments";
 import { todayISO } from "@/lib/stats";
 
 export const runtime = "nodejs";
@@ -14,7 +14,13 @@ export async function POST(request: Request) {
       const message = String(formData.get("message") ?? "").trim();
       const date = String(formData.get("date") ?? todayISO());
       const historyRaw = String(formData.get("history") ?? "[]");
-      const history = JSON.parse(historyRaw) as { role: "user" | "assistant"; content: string }[];
+      let history: { role: "user" | "assistant"; content: string }[] = [];
+
+      try {
+        history = JSON.parse(historyRaw);
+      } catch {
+        return NextResponse.json({ error: "Invalid chat history." }, { status: 400 });
+      }
 
       const fileEntries = formData
         .getAll("files")
@@ -27,7 +33,7 @@ export async function POST(request: Request) {
       const attachmentInputs: CoachAttachmentInput[] = await Promise.all(
         fileEntries.map(async (file) => ({
           name: file.name,
-          mimeType: file.type || "application/octet-stream",
+          mimeType: resolveAttachmentMimeType(file.name, file.type || ""),
           buffer: Buffer.from(await file.arrayBuffer()),
         }))
       );

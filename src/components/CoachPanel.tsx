@@ -22,7 +22,47 @@ type PendingAttachment = {
 };
 
 const ACCEPTED_FILE_TYPES =
-  "image/jpeg,image/png,image/webp,image/gif,application/pdf,.pdf";
+  "image/jpeg,image/png,image/webp,image/gif,application/pdf,.pdf,.jpg,.jpeg,.png,.webp,.gif";
+
+const UNSUPPORTED_EXTENSIONS = new Set(["heic", "heif", "bmp", "svg", "doc", "docx"]);
+
+function resolveClientMimeType(file: File): string {
+  if (file.type && file.type !== "application/octet-stream") return file.type;
+  const ext = file.name.toLowerCase().split(".").pop() ?? "";
+  const map: Record<string, string> = {
+    pdf: "application/pdf",
+    png: "image/png",
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    webp: "image/webp",
+    gif: "image/gif",
+  };
+  return map[ext] ?? file.type;
+}
+
+function validateClientFile(file: File): string | null {
+  const ext = file.name.toLowerCase().split(".").pop() ?? "";
+
+  if (UNSUPPORTED_EXTENSIONS.has(ext)) {
+    return `${file.name} is not supported. Save it as PNG or JPG, or export as PDF.`;
+  }
+
+  if (file.size > 4 * 1024 * 1024) {
+    return `${file.name} is too large. Max size is 4 MB.`;
+  }
+
+  const mimeType = resolveClientMimeType(file);
+  const allowed =
+    mimeType.startsWith("image/") ||
+    mimeType === "application/pdf" ||
+    file.name.toLowerCase().endsWith(".pdf");
+
+  if (!allowed) {
+    return `${file.name} is not supported. Upload PDF or image files only.`;
+  }
+
+  return null;
+}
 
 function fileKind(file: File): "image" | "pdf" {
   return file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")
@@ -68,6 +108,12 @@ export function CoachPanel() {
       if (next.length >= 3) {
         setError("You can attach up to 3 files per message.");
         break;
+      }
+
+      const validationError = validateClientFile(file);
+      if (validationError) {
+        setError(validationError);
+        continue;
       }
 
       const kind = fileKind(file);
@@ -139,8 +185,24 @@ export function CoachPanel() {
 
     setLoading(false);
 
+    let data: { reply?: string; error?: string } = {};
+    try {
+      data = await res.json();
+    } catch {
+      setError(res.ok ? "Unexpected server response." : "Upload failed. Try a smaller image or PDF.");
+      setMessages(messages);
+      setInput(text);
+      setPendingFiles(
+        filesToSend.map((file) => ({
+          id: `${file.name}-${file.lastModified}-${Math.random()}`,
+          file,
+          previewUrl: file.type.startsWith("image/") ? URL.createObjectURL(file) : undefined,
+        }))
+      );
+      return;
+    }
+
     if (!res.ok) {
-      const data = await res.json();
       setError(data.error ?? "Something went wrong. Try again.");
       setMessages(messages);
       setInput(text);
@@ -154,8 +216,7 @@ export function CoachPanel() {
       return;
     }
 
-    const data = await res.json();
-    setMessages([...nextMessages, { role: "assistant", content: data.reply }]);
+    setMessages([...nextMessages, { role: "assistant", content: data.reply ?? "" }]);
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {

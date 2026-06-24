@@ -11,6 +11,7 @@ import {
   upsertEmbedding,
 } from "./db";
 import { createEmbedding, getOpenAIClient, getActiveOpenAIModel, WENDY_SYSTEM_PROMPT } from "./openai";
+import { getChatCompletionOptions } from "./openai-config";
 import { attachmentSummary, type ProcessedCoachAttachment } from "./coach-attachments";
 import { formatRetrievedContext, retrieveRelevantChunks } from "./rag";
 import { computeDayStats, computeTradeStats, statsSummary, todayISO } from "./stats";
@@ -176,13 +177,15 @@ Action Items:
 Encouragement:
 <1-2 warm sentences>`;
 
+  const model = await getActiveOpenAIModel();
+
   const completion = await client.chat.completions.create({
-    model: await getActiveOpenAIModel(),
+    model,
     messages: [
       { role: "system", content: WENDY_SYSTEM_PROMPT },
       { role: "user", content: userPrompt },
     ],
-    temperature: 0.7,
+    ...getChatCompletionOptions(model, 0.7),
   });
 
   const content = completion.choices[0]?.message?.content ?? "";
@@ -254,8 +257,10 @@ ${journal ? journalToText(journal) : "No journal entry today."}
 Retrieved memories from trading history:
 ${formatRetrievedContext(relevant)}`;
 
+  const model = await getActiveOpenAIModel();
+
   const completion = await client.chat.completions.create({
-    model: await getActiveOpenAIModel(),
+    model,
     messages: [
       {
         role: "system",
@@ -267,7 +272,7 @@ ${formatRetrievedContext(relevant)}`;
       })),
       { role: "user", content: buildUserMessageContent(message, attachments) },
     ],
-    temperature: 0.8,
+    ...getChatCompletionOptions(model, 0.8),
   });
 
   return completion.choices[0]?.message?.content ?? "I couldn't generate a response. Try again.";

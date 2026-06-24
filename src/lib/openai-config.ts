@@ -1,6 +1,9 @@
 const DEFAULT_MODEL = "gpt-5.5";
 const DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small";
 
+/** Models that only support the default temperature (omit the parameter). */
+const MODELS_WITHOUT_CUSTOM_TEMPERATURE = /^(gpt-5|o[0-9])/i;
+
 export function getOpenAIApiKey(): string | undefined {
   return process.env.OPENAI_API_KEY?.trim() || undefined;
 }
@@ -25,4 +28,15 @@ export function requireOpenAIApiKey(): string {
     );
   }
   return key;
+}
+
+export function getChatCompletionOptions(
+  model: string,
+  temperature: number
+): { temperature?: number } {
+  if (MODELS_WITHOUT_CUSTOM_TEMPERATURE.test(model)) {
+    return {};
+  }
+
+  return { temperature };
 }

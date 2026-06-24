@@ -24,6 +24,26 @@ const IMAGE_MIME_TYPES = new Set([
 
 const PDF_MIME_TYPES = new Set(["application/pdf"]);
 
+const EXTENSION_MIME_TYPES: Record<string, string> = {
+  pdf: "application/pdf",
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  webp: "image/webp",
+  gif: "image/gif",
+};
+
+export function resolveAttachmentMimeType(name: string, mimeType: string): string {
+  const normalized = mimeType.trim().toLowerCase();
+
+  if (normalized && normalized !== "application/octet-stream") {
+    return normalized;
+  }
+
+  const extension = name.toLowerCase().split(".").pop() ?? "";
+  return EXTENSION_MIME_TYPES[extension] ?? normalized;
+}
+
 export function validateCoachAttachments(files: CoachAttachmentInput[]): void {
   if (files.length > MAX_FILES) {
     throw new Error(`You can attach up to ${MAX_FILES} files per message.`);
@@ -34,28 +54,43 @@ export function validateCoachAttachments(files: CoachAttachmentInput[]): void {
       throw new Error(`${file.name} is too large. Max size is 4 MB per file.`);
     }
 
+    const mimeType = resolveAttachmentMimeType(file.name, file.mimeType);
     const allowed =
-      IMAGE_MIME_TYPES.has(file.mimeType) || PDF_MIME_TYPES.has(file.mimeType);
+      IMAGE_MIME_TYPES.has(mimeType) || PDF_MIME_TYPES.has(mimeType);
 
     if (!allowed) {
-      throw new Error(`${file.name} is not supported. Upload PDF or image files only.`);
+      throw new Error(
+        `${file.name} is not supported. Upload a PDF or image (PNG, JPG, WEBP, GIF).`
+      );
     }
   }
 }
 
-async function extractPdfText(buffer: Buffer): Promise<string> {
+async function extractPdfContent(
+  buffer: Buffer
+): Promise<{ text?: string; dataUrl?: string }> {
   const { PDFParse } = await import("pdf-parse");
   const parser = new PDFParse({ data: buffer });
-  const result = await parser.getText();
-  await parser.destroy();
 
-  const text = result.text?.trim() ?? "";
+  try {
+    const result = await parser.getText();
+    const text = result.text?.trim() ?? "";
 
-  if (!text) {
+    if (text) {
+      return { text: text.slice(0, 12000) };
+    }
+
+    const screenshot = await parser.getScreenshot({ partial: [1], scale: 1.5 });
+    const page = screenshot.pages[0];
+
+    if (page?.dataUrl) {
+      return { dataUrl: page.dataUrl };
+    }
+
     throw new Error("Could not read text from that PDF. Try a screenshot instead.");
+  } finally {
+    await parser.destroy();
   }
-
-  return text.slice(0, 12000);
 }
 
 export async function processCoachAttachments(
@@ -66,25 +101,40 @@ export async function processCoachAttachments(
   const processed: ProcessedCoachAttachment[] = [];
 
   for (const file of files) {
-    if (IMAGE_MIME_TYPES.has(file.mimeType)) {
+    const mimeType = resolveAttachmentMimeType(file.name, file.mimeType);
+
+    if (IMAGE_MIME_TYPES.has(mimeType)) {
       const base64 = file.buffer.toString("base64");
       processed.push({
         name: file.name,
         kind: "image",
-        mimeType: file.mimeType,
-        dataUrl: `data:${file.mimeType};base64,${base64}`,
+        mimeType,
+        dataUrl: `data:${mimeType};base64,${base64}`,
       });
       continue;
     }
 
-    if (PDF_MIME_TYPES.has(file.mimeType)) {
-      const text = await extractPdfText(file.buffer);
-      processed.push({
-        name: file.name,
-        kind: "pdf",
-        mimeType: file.mimeType,
-        text,
-      });
+    if (PDF_MIME_TYPES.has(mimeType)) {
+      const pdfResult = await extractPdfContent(file.buffer);
+
+      if (pdfResult.text) {
+        processed.push({
+          name: file.name,
+          kind: "pdf",
+          mimeType,
+          text: pdfResult.text,
+        });
+        continue;
+      }
+
+      if (pdfResult.dataUrl) {
+        processed.push({
+          name: file.name,
+          kind: "image",
+          mimeType: "image/png",
+          dataUrl: pdfResult.dataUrl,
+        });
+      }
     }
   }
 
