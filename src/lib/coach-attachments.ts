@@ -66,11 +66,19 @@ export function validateCoachAttachments(files: CoachAttachmentInput[]): void {
   }
 }
 
+async function createPdfParser(buffer: Buffer) {
+  const [{ CanvasFactory }, { PDFParse }] = await Promise.all([
+    import("pdf-parse/worker"),
+    import("pdf-parse"),
+  ]);
+
+  return new PDFParse({ data: buffer, CanvasFactory });
+}
+
 async function extractPdfContent(
   buffer: Buffer
 ): Promise<{ text?: string; dataUrl?: string }> {
-  const { PDFParse } = await import("pdf-parse");
-  const parser = new PDFParse({ data: buffer });
+  const parser = await createPdfParser(buffer);
 
   try {
     const result = await parser.getText();
