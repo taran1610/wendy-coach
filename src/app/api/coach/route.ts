@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { chatWithWendy } from "@/lib/coach";
 import { processCoachAttachments, resolveAttachmentMimeType, type CoachAttachmentInput } from "@/lib/coach-attachments";
-import { todayISO } from "@/lib/stats";
 
 export const runtime = "nodejs";
 
@@ -12,7 +11,6 @@ export async function POST(request: Request) {
     if (contentType.includes("multipart/form-data")) {
       const formData = await request.formData();
       const message = String(formData.get("message") ?? "").trim();
-      const date = String(formData.get("date") ?? todayISO());
       const historyRaw = String(formData.get("history") ?? "[]");
       let history: { role: "user" | "assistant"; content: string }[] = [];
 
@@ -38,8 +36,11 @@ export async function POST(request: Request) {
         }))
       );
 
-      const attachments = await processCoachAttachments(attachmentInputs);
-      const reply = await chatWithWendy(message, date, history, attachments);
+      const attachments = attachmentInputs.length
+        ? await processCoachAttachments(attachmentInputs)
+        : [];
+
+      const reply = await chatWithWendy(message, undefined, history, attachments);
       return NextResponse.json({ reply });
     }
 
@@ -50,10 +51,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Message is required" }, { status: 400 });
     }
 
-    const date = body.date ?? todayISO();
     const history = Array.isArray(body.history) ? body.history : [];
-
-    const reply = await chatWithWendy(message, date, history);
+    const reply = await chatWithWendy(message, undefined, history);
     return NextResponse.json({ reply });
   } catch (error) {
     return NextResponse.json(
